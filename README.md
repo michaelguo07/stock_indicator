@@ -33,6 +33,12 @@ python stock_indicator_lab.py --tickers SPY AAPL MSFT NVDA TSLA --start 2018-01-
 python stock_indicator_lab.py --tickers SPY --custom-candidates 3000
 ```
 
+Run the 10-iteration research loop:
+
+```bash
+python research_iterations.py
+```
+
 ## Notes
 
 Accuracy means: when the indicator says buy or sell, how often was the stock direction correct over the next `--horizon` trading days.
