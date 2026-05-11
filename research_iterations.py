@@ -150,9 +150,29 @@ def winner_for_iteration(iteration: int, change: str, results) -> IterationSumma
 
 
 def run_iterations() -> list[IterationSummary]:
-    frames = [fetch_yahoo(ticker, "2015-01-01", "2026-05-11") for ticker in DEFAULT_TICKERS]
+    frames = []
+    skipped = []
+    for ticker in DEFAULT_TICKERS:
+        try:
+            frame = fetch_yahoo(ticker, "2015-01-01", "2026-05-11")
+            if len(frame) < 260:
+                skipped.append(f"{ticker}: only {len(frame)} rows")
+                continue
+            frames.append(frame)
+        except Exception as exc:
+            skipped.append(f"{ticker}: {exc}")
+    if skipped:
+        print("Skipped symbols:")
+        for item in skipped:
+            print(f"- {item}")
+    if not frames:
+        raise SystemExit("No market data downloaded.")
+
     data = add_research_features(add_features(pd.concat(frames, ignore_index=True), horizon=5))
     train, valid, test = chronological_split(data)
+    print(f"Usable downloaded symbols: {len(frames)}")
+    print(f"Modeled rows after feature engineering: {len(data):,}")
+    print(f"Train/validation/test rows: {len(train):,}/{len(valid):,}/{len(test):,}")
 
     extra_features = [
         "ret_1",

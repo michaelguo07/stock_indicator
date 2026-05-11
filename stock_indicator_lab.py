@@ -16,7 +16,131 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 
-DEFAULT_TICKERS = ["SPY", "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "JPM", "XOM"]
+DEFAULT_TICKERS = [
+    "NVDA",
+    "GOOGL",
+    "AAPL",
+    "MSFT",
+    "AMZN",
+    "AVGO",
+    "TSLA",
+    "META",
+    "WMT",
+    "BRK.B",
+    "LLY",
+    "JPM",
+    "AMD",
+    "INTC",
+    "V",
+    "XOM",
+    "ASML",
+    "ORCL",
+    "JNJ",
+    "COST",
+    "MA",
+    "CAT",
+    "CSCO",
+    "NFLX",
+    "LRCX",
+    "BAC",
+    "CVX",
+    "ABBV",
+    "AMAT",
+    "UNH",
+    "PG",
+    "KO",
+    "PLTR",
+    "BABA",
+    "HD",
+    "GE",
+    "MS",
+    "GS",
+    "AZN",
+    "GEV",
+    "NVS",
+    "MRK",
+    "PM",
+    "TXN",
+    "RY",
+    "KLAC",
+    "TM",
+    "RTX",
+    "SHEL",
+    "WFC",
+    "QCOM",
+    "LIN",
+    "ARM",
+    "IBM",
+    "AXP",
+    "C",
+    "BHP",
+    "PEP",
+    "TMUS",
+    "ADI",
+    "NVO",
+    "SAP",
+    "VZ",
+    "MCD",
+    "HON",
+    "SBUX",
+    "ISRG",
+    "AMGN",
+    "DHR",
+    "PDD",
+    "MAR",
+    "TGT",
+    "LOW",
+    "SPG",
+    "DE",
+    "BMY",
+    "NOW",
+    "MDLZ",
+    "PANW",
+    "MRNA",
+    "PFE",
+    "ADSK",
+    "LMT",
+    "GILD",
+    "FISV",
+    "RELX",
+    "CL",
+    "MMM",
+    "NSC",
+    "EOG",
+    "VRTX",
+    "FDX",
+    "REGN",
+    "CI",
+    "ITW",
+    "COP",
+    "AIG",
+    "EL",
+    "EMR",
+    "VOO",
+    "IVV",
+    "SPY",
+    "VTI",
+    "QQQ",
+    "VEA",
+    "VUG",
+    "IEFA",
+    "VTV",
+    "IEMG",
+    "GLD",
+    "BND",
+    "VXUS",
+    "SPYM",
+    "AGG",
+    "VGT",
+    "IWF",
+    "VWO",
+    "IJH",
+    "VIG",
+]
+YAHOO_SYMBOL_OVERRIDES = {
+    "BRK.B": "BRK-B",
+    "FISV": "FI",
+}
 RNG_SEED = 42
 
 
@@ -35,10 +159,11 @@ class IndicatorResult:
 
 
 def fetch_yahoo(ticker: str, start: str, end: str) -> pd.DataFrame:
+    yahoo_ticker = YAHOO_SYMBOL_OVERRIDES.get(ticker.upper(), ticker.upper())
     start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
     end_dt = datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
     url = (
-        f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker.upper()}"
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_ticker}"
         f"?period1={int(start_dt.timestamp())}&period2={int(end_dt.timestamp())}"
         "&interval=1d&events=history&includeAdjustedClose=true"
     )
@@ -49,7 +174,7 @@ def fetch_yahoo(ticker: str, start: str, end: str) -> pd.DataFrame:
     result = payload.get("chart", {}).get("result")
     if not result:
         error = payload.get("chart", {}).get("error")
-        raise ValueError(f"No data returned for {ticker}: {error}")
+        raise ValueError(f"No data returned for {ticker} ({yahoo_ticker}): {error}")
 
     item = result[0]
     quote = item["indicators"]["quote"][0]
@@ -115,7 +240,7 @@ def add_features(frame: pd.DataFrame, horizon: int) -> pd.DataFrame:
         df["momentum_5"] = close.pct_change(5)
         df["momentum_20"] = close.pct_change(20)
         df["vol_z_20"] = (volume - volume.rolling(20).mean()) / volume.rolling(20).std()
-        df["obv_trend"] = obv.pct_change(10).replace([np.inf, -np.inf], np.nan)
+        df["obv_trend"] = obv.pct_change(10, fill_method=None).replace([np.inf, -np.inf], np.nan)
         df["gap"] = (df["open"] / close.shift()) - 1
         df["next_return"] = close.shift(-horizon) / close - 1
         df["target"] = (df["next_return"] > 0).astype(int)
